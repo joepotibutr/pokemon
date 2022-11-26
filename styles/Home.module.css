@@ -1,5 +1,31 @@
 .container {
-  padding: 0 2rem;
+  padding: 5rem;
+}
+
+.loadmore {
+  text-align: center;
+  margin-top: 12;
+  height: 32;
+  line-height: 32px;
+}
+
+.image_wrapper {
+  text-align: center;
+  padding: 30px;
+}
+
+.card_main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  position: relative;
+}
+
+.back_button {
+  position: absolute;
+  top: -3em;
+  left: -1em;
 }
 
 .main {

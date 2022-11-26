@@ -1,8 +1,127 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import Head from "next/head";
+import React from "react";
+import styles from "../styles/Home.module.css";
+import "antd/dist/reset.css";
+import { useQuery, gql } from "@apollo/client";
+import { Avatar, Button, Input, List, Select } from "antd";
+import Link from "next/link";
+
+export interface Pokemon {
+  levellingRate: string;
+  flavorTexts: Array<{
+    flavor: string;
+    game: string;
+  }>;
+  gender: {
+    male: string;
+    female: string;
+  };
+  sprite: string;
+  baseStats: {
+    attack: number;
+    defense: number;
+    hp: number;
+    specialattack: number;
+    specialdefense: number;
+    speed: number;
+  };
+  types: Array<string>;
+  species: string;
+  bulbapediaPage: string;
+}
+
+export const POKEMONS_QUERY = gql`
+  query Pokemons($search: String = "a", $offset: Int!) {
+    getFuzzyPokemon(pokemon: $search, offset: $offset, take: 50) {
+      levellingRate
+      flavorTexts {
+        flavor
+        game
+      }
+      gender {
+        male
+        female
+      }
+      sprite
+      baseStats {
+        attack
+        defense
+        hp
+        specialattack
+        specialdefense
+        speed
+      }
+      types
+      species
+      bulbapediaPage
+    }
+  }
+`;
 
 export default function Home() {
+  const [currentItemLength, setCurrentItemLength] = React.useState(0);
+  const [currentData, setCurrentData] = React.useState<Array<Pokemon>>([]);
+  const [initialLoading, setInitialLoading] = React.useState(false);
+  const [currentFilter, setFilter] = React.useState("species");
+
+  const { data, loading, error, fetchMore } = useQuery(POKEMONS_QUERY, {
+    variables: {
+      offset: currentItemLength,
+    } as {
+      offset: number;
+      search?: string;
+    },
+  });
+
+  React.useEffect(() => {
+    if (initialLoading) {
+      onLoadMore();
+    }
+  }, [initialLoading]);
+
+  React.useEffect(() => {
+    if (!loading && data) {
+      setInitialLoading(true);
+      setCurrentData((prev) => [...prev, ...data.getFuzzyPokemon]);
+    }
+  }, [loading, data]);
+
+  React.useEffect(() => {
+    if (error && currentData.length) {
+      setCurrentData([]);
+    }
+  }, [error]);
+
+  const onLoadMore = () => {
+    setCurrentItemLength((prev) => prev + 50);
+    fetchMore({
+      variables: {
+        offset: currentItemLength + 50,
+      },
+    });
+  };
+
+  const loadMore =
+    !loading && currentData.length ? (
+      <div className={styles.loadmore}>
+        <Button onClick={onLoadMore}>loading more</Button>
+      </div>
+    ) : null;
+
+  function onFilter(searchTerms: string) {
+    if (searchTerms) {
+      setCurrentData((prev: any) =>
+        prev.filter((pokemon: any) => {
+          return pokemon[currentFilter].includes(searchTerms);
+        })
+      );
+    } else {
+      setCurrentData([]);
+      setInitialLoading(false);
+      setCurrentItemLength(0);
+    }
+  }
+
   return (
     <div className={styles.container}>
       <Head>
@@ -11,61 +130,51 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.tsx</code>
-        </p>
-
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className={styles.card}
+      <div>
+        <Input.Group compact>
+          <Select
+            defaultValue={currentFilter}
+            style={{ width: "10%" }}
+            onChange={(val) => setFilter(val)}
           >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
-
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <span className={styles.logo}>
-            <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span>
-        </a>
-      </footer>
+            <Select.Option value="species">Species</Select.Option>
+            <Select.Option value="types">Types</Select.Option>
+          </Select>
+          <Input.Search
+            style={{ width: "30%" }}
+            loading={loading}
+            placeholder={`Search ${currentFilter}`}
+            onSearch={onFilter}
+          />
+        </Input.Group>
+      </div>
+      <div style={{ marginTop: "3em" }}>
+        <List
+          grid={{ gutter: 16, column: 4 }}
+          itemLayout="horizontal"
+          loading={loading}
+          dataSource={currentData}
+          loadMore={loadMore}
+          renderItem={(item) => (
+            <List.Item>
+              <List.Item.Meta
+                avatar={<Avatar src={item.sprite} />}
+                title={
+                  <Link
+                    href={{
+                      pathname: "/pokemon/[species]",
+                      query: { species: item.species },
+                    }}
+                  >
+                    {item.species.charAt(0).toUpperCase() +
+                      item.species.slice(1)}
+                  </Link>
+                }
+              />
+            </List.Item>
+          )}
+        />
+      </div>
     </div>
-  )
+  );
 }
