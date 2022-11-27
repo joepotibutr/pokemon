@@ -3,8 +3,24 @@ import React from "react";
 import styles from "../styles/Home.module.css";
 import "antd/dist/reset.css";
 import { useQuery, gql } from "@apollo/client";
-import { Avatar, Button, Input, List, Select } from "antd";
+import {
+  Avatar,
+  Button,
+  Input,
+  List,
+  Popover,
+  Select,
+  Space,
+  Typography,
+} from "antd";
 import Link from "next/link";
+import {
+  CloseCircleFilled,
+  HeartFilled,
+  HeartOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
+} from "@ant-design/icons";
 
 export interface Pokemon {
   levellingRate: string;
@@ -64,6 +80,10 @@ export default function Home() {
   const [initialLoading, setInitialLoading] = React.useState(false);
   const [currentFilter, setFilter] = React.useState("species");
 
+  const [watchList, setWatchList] = React.useState<Array<string>>([]);
+
+  const [order, setOrder] = React.useState<"asc" | "desc">("asc");
+
   const { data, loading, error, fetchMore } = useQuery(POKEMONS_QUERY, {
     variables: {
       offset: currentItemLength,
@@ -91,6 +111,8 @@ export default function Home() {
       setCurrentData([]);
     }
   }, [error]);
+
+  // React.useEffect(() => {}, [order]);
 
   const onLoadMore = () => {
     setCurrentItemLength((prev) => prev + 50);
@@ -122,6 +144,37 @@ export default function Home() {
     }
   }
 
+  const wachListData = [...watchList].sort((a, b) => {
+    if (order === "asc") {
+      return -1;
+    }
+    return 1;
+  });
+
+  const content = (
+    <div>
+      {watchList.length ? (
+        <List
+          dataSource={wachListData}
+          renderItem={(item) => (
+            <List.Item>
+              <List.Item.Meta title={item} />
+              <CloseCircleFilled
+                onClick={() =>
+                  setWatchList((prev) =>
+                    prev.filter((current) => current !== item)
+                  )
+                }
+              />
+            </List.Item>
+          )}
+        />
+      ) : (
+        <p>Pokemon watch list is empty</p>
+      )}
+    </div>
+  );
+
   return (
     <div className={styles.container}>
       <Head>
@@ -130,7 +183,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div>
+      <Space style={{ width: 1000 }} direction="vertical">
         <Input.Group compact>
           <Select
             defaultValue={currentFilter}
@@ -147,7 +200,29 @@ export default function Home() {
             onSearch={onFilter}
           />
         </Input.Group>
-      </div>
+
+        <Popover
+          placement="top"
+          trigger="click"
+          content={content}
+          title={
+            <Button
+              icon={
+                order === "asc" ? (
+                  <SortAscendingOutlined />
+                ) : (
+                  <SortDescendingOutlined />
+                )
+              }
+              onClick={() => {
+                setOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+              }}
+            ></Button>
+          }
+        >
+          <Button icon={<HeartFilled />}>({watchList.length})</Button>
+        </Popover>
+      </Space>
       <div style={{ marginTop: "3em" }}>
         <List
           grid={{ gutter: 16, column: 4 }}
@@ -159,6 +234,23 @@ export default function Home() {
             <List.Item>
               <List.Item.Meta
                 avatar={<Avatar src={item.sprite} />}
+                description={
+                  watchList.includes(item.species) ? (
+                    <HeartFilled
+                      onClick={() =>
+                        setWatchList((prev) =>
+                          prev.filter((current) => current !== item.species)
+                        )
+                      }
+                    />
+                  ) : (
+                    <HeartOutlined
+                      onClick={() =>
+                        setWatchList((prev) => [...prev, item.species])
+                      }
+                    />
+                  )
+                }
                 title={
                   <Link
                     href={{

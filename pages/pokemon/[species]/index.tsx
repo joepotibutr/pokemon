@@ -12,6 +12,7 @@ import { useRouter } from "next/router";
 import React from "react";
 import { Pokemon } from "../../index";
 import styles from "../../../styles/Home.module.css";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 
 export const POKEMON_QUERY = gql`
   query Pokemon($search: PokemonEnum!) {
@@ -168,7 +169,7 @@ const PokemonDetail = () => {
           type="text"
           onClick={() => router.back()}
         >
-          Back
+          <ArrowLeftOutlined />
         </Button>
         {contentList[activeTabKey]}
       </Card>
